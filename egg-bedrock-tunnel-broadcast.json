@@ -129,6 +129,66 @@
       "field_type": "text"
     },
     {
+      "name": "frp を使う",
+      "description": "オンにすると frp クライアントを起動し、ポートを開けられる別のサーバー(frps)経由で公開します。playit とは併用せず、どちらか一方にしてください。",
+      "env_variable": "USE_FRP",
+      "default_value": "0",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|boolean",
+      "field_type": "text"
+    },
+    {
+      "name": "frp サーバー",
+      "description": "外から届く側のサーバー(frps を動かしているマシン)のアドレス。",
+      "env_variable": "FRP_SERVER",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string|max:200",
+      "field_type": "text"
+    },
+    {
+      "name": "frp サーバーポート",
+      "description": "frps の bindPort。",
+      "env_variable": "FRP_SERVER_PORT",
+      "default_value": "7000",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|integer|min:1|max:65535",
+      "field_type": "text"
+    },
+    {
+      "name": "frp トークン",
+      "description": "frps の auth.token と同じ文字列。長いランダムな文字列にしてください。",
+      "env_variable": "FRP_TOKEN",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string|max:200",
+      "field_type": "text"
+    },
+    {
+      "name": "frp 転送の指定",
+      "description": "任意。「プロトコル:こちらのポート:外のポート」をカンマ区切りで指定(例: tcp:8013:19132,udp:8013:19132,udp:19132:19133)。空なら、サーバーポートを「公開ポート」へ TCP と UDP で転送します。",
+      "env_variable": "FRP_FORWARDS",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string|max:300",
+      "field_type": "text"
+    },
+    {
+      "name": "frp バージョン",
+      "description": "任意。frps と同じバージョンを指定してください(例: 0.61.0)。空なら最新版を使い、自動アップデートの対象になります。",
+      "env_variable": "FRP_VERSION",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string|max:20",
+      "field_type": "text"
+    },
+    {
       "name": "公開アドレス",
       "description": "playit ダッシュボードで作ったトンネルのホスト名(例: xxx.gl.joinmc.link)。未設定でもサーバーは起動します。フレンドリストに広告されます。",
       "env_variable": "PUBLIC_ADDRESS",
