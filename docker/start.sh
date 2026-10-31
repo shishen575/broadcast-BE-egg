@@ -18,6 +18,7 @@ UPDATE_WARNING=${UPDATE_WARNING:-5}      # minutes of in-game notice before rest
 UNIT=${UPDATE_SLEEP_UNIT:-60}            # seconds per "minute" (tests shrink this)
 
 mkdir -p "$VDIR"
+is_on() { case "${1,,}" in 1|true|yes|on) return 0 ;; esac; return 1; }
 log() { printf '[egg] %s\n' "$*"; }
 ver_get() { cat "$VDIR/$1" 2>/dev/null; }
 ver_set() { printf '%s\n' "$2" > "$VDIR/$1"; }
@@ -45,8 +46,8 @@ remote_version() {
 
 enabled_components() {
   echo bds
-  [ "${USE_PLAYIT}" = "1" ] && echo playit
-  [ "${USE_BROADCAST}" = "1" ] && [ -n "${PUBLIC_ADDRESS}" ] && [ -n "${PUBLIC_PORT}" ] && echo broadcast
+  is_on "$USE_PLAYIT" && echo playit
+  is_on "$USE_BROADCAST" && [ -n "${PUBLIC_ADDRESS}" ] && [ -n "${PUBLIC_PORT}" ] && echo broadcast
 }
 
 component_path() {
@@ -96,11 +97,11 @@ sync_components() {
     r=$(remote_version "$c")
     need=0
     [ -e "$(component_path "$c")" ] || need=1
-    [ "$AUTO_UPDATE" = "1" ] && [ -n "$r" ] && [ "$r" != "$(ver_get "$c")" ] && need=1
+    is_on "$AUTO_UPDATE" && [ -n "$r" ] && [ "$r" != "$(ver_get "$c")" ] && need=1
     [ "$need" = 1 ] && [ -n "$r" ] || continue
-    log "Installing $c ($r)"
+    log "$c をインストール中 ($r)"
     if [ "$c" = bds ]; then install_bds "$r"; else "install_$c"; fi \
-      && ver_set "$c" "$r" || log "Failed to install $c, keeping the current version"
+      && ver_set "$c" "$r" || log "$c のインストールに失敗しました。現在のバージョンを使い続けます"
   done
 }
 
@@ -146,19 +147,19 @@ stop_helpers() {
 }
 
 start_helpers() {
-  if [ "${USE_PLAYIT}" = "1" ] && [ -x "$PLAYIT_BIN" ]; then
+  if is_on "$USE_PLAYIT" && [ -x "$PLAYIT_BIN" ]; then
     local args=()
     [ -n "${PLAYIT_SECRET}" ] && args+=(--secret "${PLAYIT_SECRET}")
-    log "Starting playit tunnel (open the claim URL below on first run)"
+    log "playit トンネルを起動します(初回は下に表示される認証URLを開いてください)"
     "$PLAYIT_BIN" "${args[@]}" </dev/null &
     HELPER_PIDS+=($!)
   fi
-  if [ "${USE_BROADCAST}" = "1" ]; then
+  if is_on "$USE_BROADCAST"; then
     if [ -z "${PUBLIC_ADDRESS}" ] || [ -z "${PUBLIC_PORT}" ]; then
-      log "Broadcast skipped: set PUBLIC_ADDRESS and PUBLIC_PORT (tunnel address from the playit dashboard)"
+      log "フレンド参加用の broadcast をスキップしました: playit ダッシュボードのトンネルアドレスを PUBLIC_ADDRESS と PUBLIC_PORT に設定してください"
     elif [ -f "$BROADCAST_JAR" ]; then
       write_broadcast_config
-      log "Starting MCXboxBroadcast (sign in with the Microsoft code below on first run)"
+      log "MCXboxBroadcast を起動します(初回は下に表示される Microsoft のコードでサインインしてください)"
       ( cd broadcast && exec java -Xmx256M -jar ../"$BROADCAST_JAR" ) </dev/null &
       HELPER_PIDS+=($!)
     fi
@@ -171,7 +172,7 @@ update_watcher() {
   while sleep $((UPDATE_INTERVAL * UNIT)); do
     pending=$(outdated_components | tr '\n' ' ')
     [ -z "$pending" ] && continue
-    log "Updates available: $pending"
+    log "アップデートがあります: $pending"
     w=$UPDATE_WARNING
     if [ "$w" -gt 0 ]; then
       send "say アップデートのため ${w} 分後にサーバーを再起動します"
@@ -183,7 +184,7 @@ update_watcher() {
       send "say 10 秒後に再起動します"
       sleep $((UNIT > 10 ? 10 : 1))
     fi
-    log "Restarting to apply updates"
+    log "アップデート適用のため再起動します"
     touch "$RESTART_FLAG"
     send "stop"
     return
@@ -212,7 +213,7 @@ while true; do
   rm -f "$RESTART_FLAG"
   sync_components
   start_helpers
-  if [ "$AUTO_UPDATE" = "1" ]; then
+  if is_on "$AUTO_UPDATE"; then
     update_watcher &
     WATCHER_PID=$!
   fi
@@ -224,5 +225,5 @@ while true; do
   WATCHER_PID=
   stop_helpers
   [ -f "$RESTART_FLAG" ] || exit "$code"
-  log "Server stopped for update, restarting"
+  log "アップデートのためサーバーを停止しました。再起動します"
 done

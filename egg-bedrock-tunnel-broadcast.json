@@ -1,16 +1,16 @@
 {
-  "_comment": "Bedrock Dedicated Server with playit.gg tunnel (no port forwarding) and MCXboxBroadcast (join from Xbox friends list).",
+  "_comment": "統合版サーバー + playit.gg トンネル(ポート開放不要) + MCXboxBroadcast(フレンドリストから参加)",
   "meta": {
     "version": "PTDL_v2",
     "update_url": null
   },
   "exported_at": "2026-10-31T00:00:00+00:00",
-  "name": "Bedrock + Tunnel + Broadcast",
+  "name": "統合版 (Bedrock) + トンネル + フレンド参加",
   "author": "keinosuke575@gmail.com",
-  "description": "Minecraft Bedrock Edition server that works without port forwarding (playit.gg UDP tunnel) and shows up in the Xbox friends list (MCXboxBroadcast).",
+  "description": "ポート開放なし(playit.gg のUDPトンネル)で動き、Xboxのフレンドリストから参加できる(MCXboxBroadcast)統合版サーバーです。BDS・playit・MCXboxBroadcast の最新版を自動で更新します。",
   "features": null,
   "docker_images": {
-    "Bedrock + Tunnel + Broadcast": "ghcr.io/shishen575/broadcast-be-egg:latest"
+    "統合版 + トンネル + フレンド参加": "ghcr.io/shishen575/broadcast-be-egg:latest"
   },
   "file_denylist": [],
   "startup": "bash /opt/start.sh",
@@ -29,8 +29,8 @@
   },
   "variables": [
     {
-      "name": "Bedrock version",
-      "description": "BDS version, or 'latest'.",
+      "name": "Bedrock のバージョン",
+      "description": "BDS のバージョン。'latest' で最新版(自動更新の対象になります)。数字を指定すると固定されます。",
       "env_variable": "BEDROCK_VERSION",
       "default_value": "latest",
       "user_viewable": true,
@@ -39,8 +39,8 @@
       "field_type": "text"
     },
     {
-      "name": "Server name",
-      "description": "Name shown in the server list and friends list.",
+      "name": "サーバー名",
+      "description": "サーバー一覧・フレンドリストに表示される名前。",
       "env_variable": "SERVER_NAME",
       "default_value": "Bedrock Server",
       "user_viewable": true,
@@ -49,8 +49,8 @@
       "field_type": "text"
     },
     {
-      "name": "World name",
-      "description": "World folder name.",
+      "name": "ワールド名",
+      "description": "ワールドのフォルダ名。",
       "env_variable": "LEVEL_NAME",
       "default_value": "Bedrock level",
       "user_viewable": true,
@@ -59,8 +59,8 @@
       "field_type": "text"
     },
     {
-      "name": "Gamemode",
-      "description": "survival, creative or adventure.",
+      "name": "ゲームモード",
+      "description": "survival(サバイバル) / creative(クリエイティブ) / adventure(アドベンチャー)",
       "env_variable": "GAMEMODE",
       "default_value": "survival",
       "user_viewable": true,
@@ -69,8 +69,8 @@
       "field_type": "text"
     },
     {
-      "name": "Difficulty",
-      "description": "peaceful, easy, normal or hard.",
+      "name": "難易度",
+      "description": "peaceful(平和) / easy(イージー) / normal(ノーマル) / hard(ハード)",
       "env_variable": "DIFFICULTY",
       "default_value": "easy",
       "user_viewable": true,
@@ -79,8 +79,8 @@
       "field_type": "text"
     },
     {
-      "name": "Max players",
-      "description": "Maximum players.",
+      "name": "最大プレイヤー数",
+      "description": "同時に参加できる最大人数。",
       "env_variable": "MAX_PLAYERS",
       "default_value": "10",
       "user_viewable": true,
@@ -89,8 +89,8 @@
       "field_type": "text"
     },
     {
-      "name": "Online mode",
-      "description": "Require Xbox authentication.",
+      "name": "オンラインモード",
+      "description": "Xbox認証を必須にします。",
       "env_variable": "ONLINE_MODE",
       "default_value": "true",
       "user_viewable": true,
@@ -99,18 +99,18 @@
       "field_type": "text"
     },
     {
-      "name": "Use playit tunnel",
-      "description": "1 = start the playit.gg agent so no port forwarding is needed.",
+      "name": "playit トンネルを使う",
+      "description": "オンにすると playit.gg のエージェントを起動し、ポート開放なしで外から接続できるようにします。",
       "env_variable": "USE_PLAYIT",
       "default_value": "1",
       "user_viewable": true,
       "user_editable": true,
-      "rules": "required|string|in:0,1",
+      "rules": "required|boolean",
       "field_type": "text"
     },
     {
-      "name": "playit secret",
-      "description": "Optional agent secret. Leave empty to claim via the URL printed in the console.",
+      "name": "playit シークレット",
+      "description": "任意。空欄のままなら、初回起動時にコンソールへ表示される認証URLから登録します。",
       "env_variable": "PLAYIT_SECRET",
       "default_value": "",
       "user_viewable": true,
@@ -119,8 +119,8 @@
       "field_type": "text"
     },
     {
-      "name": "Public address",
-      "description": "Tunnel host from the playit dashboard (e.g. xxx.gl.joinmc.link). Advertised to friends.",
+      "name": "公開アドレス",
+      "description": "playit ダッシュボードのトンネルのホスト名(例: xxx.gl.joinmc.link)。フレンドリストに広告されます。",
       "env_variable": "PUBLIC_ADDRESS",
       "default_value": "",
       "user_viewable": true,
@@ -129,8 +129,8 @@
       "field_type": "text"
     },
     {
-      "name": "Public port",
-      "description": "Tunnel public UDP port from the playit dashboard.",
+      "name": "公開ポート",
+      "description": "playit ダッシュボードのトンネルのUDPポート番号。",
       "env_variable": "PUBLIC_PORT",
       "default_value": "",
       "user_viewable": true,
@@ -139,18 +139,18 @@
       "field_type": "text"
     },
     {
-      "name": "Use friends-list broadcast",
-      "description": "1 = run MCXboxBroadcast so friends can join from the friends list.",
+      "name": "フレンド参加を使う",
+      "description": "オンにすると MCXboxBroadcast を起動し、Xboxのフレンドリストからサーバーに参加できるようにします。",
       "env_variable": "USE_BROADCAST",
       "default_value": "1",
       "user_viewable": true,
       "user_editable": true,
-      "rules": "required|string|in:0,1",
+      "rules": "required|boolean",
       "field_type": "text"
     },
     {
-      "name": "Broadcast game version",
-      "description": "Version string shown in the session. Update when BDS updates.",
+      "name": "broadcast のゲームバージョン",
+      "description": "フレンドリストに表示するバージョン文字列。初回起動時のみ設定ファイルに反映されます。",
       "env_variable": "BROADCAST_VERSION",
       "default_value": "1.21.0",
       "user_viewable": true,
@@ -159,8 +159,8 @@
       "field_type": "text"
     },
     {
-      "name": "Broadcast protocol",
-      "description": "Protocol number matching the BDS version.",
+      "name": "broadcast のプロトコル番号",
+      "description": "BDS のバージョンに対応するプロトコル番号。初回起動時のみ設定ファイルに反映されます。",
       "env_variable": "BROADCAST_PROTOCOL",
       "default_value": "685",
       "user_viewable": true,
@@ -169,18 +169,18 @@
       "field_type": "text"
     },
     {
-      "name": "Auto update",
-      "description": "1 = periodically check for new BDS / playit / MCXboxBroadcast versions, announce in-game and restart to apply them.",
+      "name": "自動アップデート",
+      "description": "オンにすると BDS・playit・MCXboxBroadcast の新バージョンを定期確認し、ゲーム内で告知してから再起動して適用します。",
       "env_variable": "AUTO_UPDATE",
       "default_value": "1",
       "user_viewable": true,
       "user_editable": true,
-      "rules": "required|string|in:0,1",
+      "rules": "required|boolean",
       "field_type": "text"
     },
     {
-      "name": "Update check interval",
-      "description": "Minutes between update checks.",
+      "name": "アップデート確認の間隔",
+      "description": "新バージョンを確認する間隔(分)。",
       "env_variable": "UPDATE_INTERVAL",
       "default_value": "60",
       "user_viewable": true,
@@ -189,8 +189,8 @@
       "field_type": "text"
     },
     {
-      "name": "Update notice",
-      "description": "Minutes of in-game notice before the restart (0 = restart immediately).",
+      "name": "再起動前の告知時間",
+      "description": "再起動の何分前からゲーム内で告知するか(分)。0なら告知せずすぐ再起動します。",
       "env_variable": "UPDATE_WARNING",
       "default_value": "5",
       "user_viewable": true,
