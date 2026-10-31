@@ -180,7 +180,10 @@ start_helpers() {
       log "playit を起動します(シークレット未設定の場合、認証URLが表示されることがあります)"
       # playitd needs a writable control-socket path, otherwise it exits with "Failed to bind to socket".
       rm -f "$PLAYIT_SOCK"
-      SECRET_KEY="${PLAYIT_SECRET}" "$PLAYIT_BIN" --socket-path "$PLAYIT_SOCK" </dev/null &
+      # The daemon takes the key as --secret=<key> (the SECRET_KEY variable is only read by the official Docker entrypoint).
+      local args=(--socket-path "$PLAYIT_SOCK" --platform-docker)
+      [ -n "${PLAYIT_SECRET}" ] && args+=("--secret=${PLAYIT_SECRET}")
+      "$PLAYIT_BIN" "${args[@]}" </dev/null &
       HELPER_PIDS+=($!)
     else
       log "playit が見つかりません(ダウンロードに失敗した可能性があります)。ネットワークの設定を確認してください"
