@@ -40,14 +40,14 @@ remote_version() {
   case $1 in
     bds) [ "${BEDROCK_VERSION:-latest}" = latest ] && latest_bds_url ;;
     playit) latest_gh_tag playit-cloud/playit-agent ;;
-    broadcast) latest_gh_tag MiniDigger/MCXboxBroadcast ;;
+    broadcast) latest_gh_tag rtm516/MCXboxBroadcast ;;
   esac 2>/dev/null
 }
 
 enabled_components() {
   echo bds
   is_on "$USE_PLAYIT" && echo playit
-  is_on "$USE_BROADCAST" && [ -n "${PUBLIC_ADDRESS}" ] && [ -n "${PUBLIC_PORT}" ] && echo broadcast
+  is_on "$USE_BROADCAST" && echo broadcast
 }
 
 component_path() {
@@ -86,7 +86,7 @@ install_playit() {
 
 install_broadcast() {
   curl -fsSL -o "$BROADCAST_JAR.new" \
-    "https://github.com/MiniDigger/MCXboxBroadcast/releases/latest/download/MCXboxBroadcastStandalone.jar" \
+    "https://github.com/rtm516/MCXboxBroadcast/releases/latest/download/MCXboxBroadcastStandalone.jar" \
     && mv "$BROADCAST_JAR.new" "$BROADCAST_JAR"
 }
 
@@ -107,6 +107,8 @@ sync_components() {
 
 # ---- broadcast config ------------------------------------------------------
 write_broadcast_config() {
+  # Until the tunnel address is known, advertise "auto" so the Microsoft sign-in can still be done.
+  local adv_ip=${PUBLIC_ADDRESS:-auto} adv_port=${PUBLIC_PORT:-${SERVER_PORT:-19132}}
   mkdir -p broadcast && cd broadcast || return
   if [ ! -f config.yml ]; then
     cat > config.yml <<YML
@@ -122,8 +124,8 @@ session:
     protocol: ${BROADCAST_PROTOCOL}
     players: 0
     max-players: ${MAX_PLAYERS}
-    ip: "${PUBLIC_ADDRESS}"
-    port: ${PUBLIC_PORT}
+    ip: "${adv_ip}"
+    port: ${adv_port}
 friend-sync:
   update-interval: 60
   auto-follow: true
@@ -133,7 +135,7 @@ friend-sync:
 YML
   else
     # Keep the advertised address in sync with the panel variables.
-    sed -i -E "s|^(\s*ip:).*|\1 \"${PUBLIC_ADDRESS}\"|; s|^(\s*port:).*|\1 ${PUBLIC_PORT}|" config.yml
+    sed -i -E "s|^(\s*ip:).*|\1 \"${adv_ip}\"|; s|^(\s*port:).*|\1 ${adv_port}|" config.yml
   fi
   cd ..
 }
@@ -146,22 +148,49 @@ stop_helpers() {
   HELPER_PIDS=()
 }
 
-start_helpers() {
-  if is_on "$USE_PLAYIT" && [ -x "$PLAYIT_BIN" ]; then
-    local args=()
-    [ -n "${PLAYIT_SECRET}" ] && args+=(--secret "${PLAYIT_SECRET}")
-    log "playit トンネルを起動します(初回は下に表示される認証URLを開いてください)"
-    "$PLAYIT_BIN" "${args[@]}" </dev/null &
-    HELPER_PIDS+=($!)
+# Never stops the server: unfinished setup is only reported in the console.
+print_setup_status() {
+  log "================ セットアップ状況 ================"
+  if is_on "$USE_PLAYIT"; then
+    if [ -n "${PLAYIT_SECRET}" ]; then
+      log "[OK] playit シークレット: 設定済み"
+    else
+      log "[未完了] playit シークレットが未設定です。playit.gg でエージェントのシークレットキーを発行し、パネルの「playit シークレットキー」に入力して再起動してください"
+    fi
+  fi
+  if [ -n "${PUBLIC_ADDRESS}" ] && [ -n "${PUBLIC_PORT}" ]; then
+    log "[OK] 公開アドレス: ${PUBLIC_ADDRESS}:${PUBLIC_PORT}"
+  else
+    log "[未完了] 公開アドレス/公開ポートが未設定です。playit ダッシュボードで Minecraft Bedrock (UDP) のトンネルを作り、パネルの「公開アドレス」「公開ポート」に入力して再起動してください(それまでサーバー自体は通常どおり起動します)"
   fi
   if is_on "$USE_BROADCAST"; then
-    if [ -z "${PUBLIC_ADDRESS}" ] || [ -z "${PUBLIC_PORT}" ]; then
-      log "フレンド参加用の broadcast をスキップしました: playit ダッシュボードのトンネルアドレスを PUBLIC_ADDRESS と PUBLIC_PORT に設定してください"
-    elif [ -f "$BROADCAST_JAR" ]; then
+    if [ -d broadcast/cache ] || [ -d broadcast/auth ]; then
+      log "[OK] フレンド参加: Microsoft アカウントでサインイン済みの可能性があります"
+    else
+      log "[未完了] フレンド参加: このあと表示される Microsoft のコードで、ボット用アカウントでサインインしてください"
+    fi
+  fi
+  log "=================================================="
+}
+
+start_helpers() {
+  if is_on "$USE_PLAYIT"; then
+    if [ -x "$PLAYIT_BIN" ]; then
+      log "playit を起動します(シークレット未設定の場合、認証URLが表示されることがあります)"
+      SECRET_KEY="${PLAYIT_SECRET}" "$PLAYIT_BIN" </dev/null &
+      HELPER_PIDS+=($!)
+    else
+      log "playit が見つかりません(ダウンロードに失敗した可能性があります)。ネットワークの設定を確認してください"
+    fi
+  fi
+  if is_on "$USE_BROADCAST"; then
+    if [ -f "$BROADCAST_JAR" ]; then
       write_broadcast_config
-      log "MCXboxBroadcast を起動します(初回は下に表示される Microsoft のコードでサインインしてください)"
+      log "MCXboxBroadcast を起動します(初回は下に表示される Microsoft のコードで https://www.microsoft.com/link からサインインしてください)"
       ( cd broadcast && exec java -Xmx256M -jar ../"$BROADCAST_JAR" ) </dev/null &
       HELPER_PIDS+=($!)
+    else
+      log "MCXboxBroadcast が見つかりません(ダウンロードに失敗した可能性があります)。ネットワークの設定を確認してください"
     fi
   fi
 }
@@ -212,6 +241,7 @@ export LD_LIBRARY_PATH=.
 while true; do
   rm -f "$RESTART_FLAG"
   sync_components
+  print_setup_status
   start_helpers
   if is_on "$AUTO_UPDATE"; then
     update_watcher &
