@@ -6,6 +6,7 @@ cd /home/container || exit 1
 PLAYIT_BIN=./playit
 BROADCAST_JAR=./MCXboxBroadcastStandalone.jar
 BDS_BIN=./bedrock_server
+PLAYIT_SOCK=/home/container/.playit.sock
 VDIR=.versions
 CMD_FIFO=.bds_stdin
 RESTART_FLAG=.restart_pending
@@ -177,7 +178,9 @@ start_helpers() {
   if is_on "$USE_PLAYIT"; then
     if [ -x "$PLAYIT_BIN" ]; then
       log "playit を起動します(シークレット未設定の場合、認証URLが表示されることがあります)"
-      SECRET_KEY="${PLAYIT_SECRET}" "$PLAYIT_BIN" </dev/null &
+      # playitd needs a writable control-socket path, otherwise it exits with "Failed to bind to socket".
+      rm -f "$PLAYIT_SOCK"
+      SECRET_KEY="${PLAYIT_SECRET}" "$PLAYIT_BIN" --socket-path "$PLAYIT_SOCK" </dev/null &
       HELPER_PIDS+=($!)
     else
       log "playit が見つかりません(ダウンロードに失敗した可能性があります)。ネットワークの設定を確認してください"
