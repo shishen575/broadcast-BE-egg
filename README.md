@@ -16,7 +16,7 @@
    パネルのポート割り当てはコンテナ内だけで使うので、何番でも構いません。
 3. **playit のシークレットキーを発行**します。playit.gg にログインし、エージェントのセットアップウィザード(「Docker」を選択)でシークレットキーを発行して、パネルの「playit シークレットキー」(`PLAYIT_SECRET`)に入力します。
 4. サーバーを起動します。コンソールの最初に「セットアップ状況」が表示され、未完了の項目があれば何をすればよいかが出ます(**未完了でもサーバー自体は止まらず起動します**)。
-   - **トンネル**: playit ダッシュボードで **Minecraft Bedrock (UDP)** のトンネルを作り、転送先を `127.0.0.1` とサーバーのポートにします。
+   - **トンネル**: playit ダッシュボードで **Minecraft Bedrock (RakNet)** のトンネル(「NetherNet」や「Java」ではありません。playit の画面で「Minecraft Bedrock requires RakNet」と出たら、確認のチェックを入れて進めてください。サーバー側は自動で RakNet に設定されます)を作り、転送先を `127.0.0.1` とサーバーのポートにします。
      できたトンネルのホスト名とポートを、`PUBLIC_ADDRESS` / `PUBLIC_PORT` に入れて再起動します。
    - **フレンド参加**: コンソールに Microsoft のコードが表示されるので、https://www.microsoft.com/link に入力してサインインします。
      サインインには、ボット用の**別のXboxアカウント**を使ってください。フレンドがそのアカウントを追加すると、フレンドリストから参加できます。
@@ -36,6 +36,7 @@
 | 難易度 (`DIFFICULTY`) | `easy` | `peaceful` / `easy` / `normal` / `hard` |
 | 最大プレイヤー数 (`MAX_PLAYERS`) | `10` | 同時に参加できる最大人数。 |
 | オンラインモード (`ONLINE_MODE`) | `true` | Xbox認証を必須にします。通常はオンのままにしてください。 |
+| 通信方式 (`TRANSPORT`) | `raknet` | `raknet` / `nethernet`。最新の BDS は既定が NetherNet ですが、playit のトンネルは RakNet のみ対応のため、起動時に `server.properties` へ `transport=raknet` を自動で書き込みます。 |
 
 これらは起動のたびに `server.properties` へ反映されます。それ以外の設定(`allow-cheats` など)は `server.properties` を直接編集してください。
 

@@ -106,6 +106,18 @@ sync_components() {
   done
 }
 
+# The playit tunnel only carries RakNet, but recent BDS versions default to NetherNet.
+ensure_transport() {
+  local t=${TRANSPORT:-raknet}
+  if [ ! -f server.properties ]; then
+    printf 'transport=%s\n' "$t" > server.properties
+  elif grep -q '^transport=' server.properties; then
+    sed -i "s|^transport=.*|transport=$t|" server.properties
+  else
+    printf '\ntransport=%s\n' "$t" >> server.properties
+  fi
+}
+
 # ---- broadcast config ------------------------------------------------------
 write_broadcast_config() {
   # Until the tunnel address is known, advertise "auto" so the Microsoft sign-in can still be done.
@@ -162,7 +174,7 @@ print_setup_status() {
   if [ -n "${PUBLIC_ADDRESS}" ] && [ -n "${PUBLIC_PORT}" ]; then
     log "[OK] 公開アドレス: ${PUBLIC_ADDRESS}:${PUBLIC_PORT}"
   else
-    log "[未完了] 公開アドレス/公開ポートが未設定です。playit ダッシュボードで Minecraft Bedrock (UDP) のトンネルを作り、パネルの「公開アドレス」「公開ポート」に入力して再起動してください(それまでサーバー自体は通常どおり起動します)"
+    log "[未完了] 公開アドレス/公開ポートが未設定です。playit ダッシュボードで Minecraft Bedrock (RakNet) のトンネルを作り、パネルの「公開アドレス」「公開ポート」に入力して再起動してください(それまでサーバー自体は通常どおり起動します)"
   fi
   if is_on "$USE_BROADCAST"; then
     if [ -d broadcast/cache ] || [ -d broadcast/auth ]; then
@@ -247,6 +259,7 @@ export LD_LIBRARY_PATH=.
 while true; do
   rm -f "$RESTART_FLAG"
   sync_components
+  ensure_transport
   print_setup_status
   start_helpers
   if is_on "$AUTO_UPDATE"; then
