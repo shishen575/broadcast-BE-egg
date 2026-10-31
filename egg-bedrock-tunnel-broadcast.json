@@ -99,6 +99,16 @@
       "field_type": "text"
     },
     {
+      "name": "通信方式 (transport)",
+      "description": "raknet または nethernet。playit のトンネルは RakNet のみ対応なので、通常は raknet のままにしてください(最新の BDS は既定が NetherNet のため、起動時に server.properties へ自動で書き込みます)。",
+      "env_variable": "TRANSPORT",
+      "default_value": "raknet",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|in:raknet,nethernet",
+      "field_type": "text"
+    },
+    {
       "name": "playit トンネルを使う",
       "description": "オンにすると playit.gg のエージェントを起動し、ポート開放なしで外から接続できるようにします。",
       "env_variable": "USE_PLAYIT",
