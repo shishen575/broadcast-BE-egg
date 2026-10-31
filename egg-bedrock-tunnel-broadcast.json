@@ -109,8 +109,8 @@
       "field_type": "text"
     },
     {
-      "name": "playit シークレット",
-      "description": "任意。空欄のままなら、初回起動時にコンソールへ表示される認証URLから登録します。",
+      "name": "playit シークレットキー",
+      "description": "playit.gg で発行したエージェントのシークレットキー(playit.gg のセットアップウィザードで「Docker」を選ぶと発行できます)。未設定でもサーバーは起動しますが、トンネルは使えません。",
       "env_variable": "PLAYIT_SECRET",
       "default_value": "",
       "user_viewable": true,
@@ -120,7 +120,7 @@
     },
     {
       "name": "公開アドレス",
-      "description": "playit ダッシュボードのトンネルのホスト名(例: xxx.gl.joinmc.link)。フレンドリストに広告されます。",
+      "description": "playit ダッシュボードで作ったトンネルのホスト名(例: xxx.gl.joinmc.link)。未設定でもサーバーは起動します。フレンドリストに広告されます。",
       "env_variable": "PUBLIC_ADDRESS",
       "default_value": "",
       "user_viewable": true,
@@ -130,7 +130,7 @@
     },
     {
       "name": "公開ポート",
-      "description": "playit ダッシュボードのトンネルのUDPポート番号。",
+      "description": "同じトンネルの、外から見えるUDPポート番号。未設定でもサーバーは起動します。",
       "env_variable": "PUBLIC_PORT",
       "default_value": "",
       "user_viewable": true,
