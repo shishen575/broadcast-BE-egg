@@ -22,7 +22,7 @@
   },
   "scripts": {
     "installation": {
-      "script": "#!/bin/bash\n# Pterodactyl install script: downloads Bedrock Dedicated Server.\napt-get update && apt-get install -y curl jq unzip ca-certificates\n\nmkdir -p /mnt/server && cd /mnt/server || exit 1\n\nUA=\"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36\"\nif [ \"${BEDROCK_VERSION}\" = \"latest\" ] || [ -z \"${BEDROCK_VERSION}\" ]; then\n  URL=$(curl -sSL -H \"Accept-Language: en\" -H \"User-Agent: $UA\" \\\n    https://net-secondary.web.minecraft-services.net/api/v1.0/download/links \\\n    | jq -r '.result.links[] | select(.downloadType == \"serverBedrockLinux\") | .downloadUrl')\nelse\n  URL=\"https://www.minecraft.net/bedrockdedicatedserver/bin-linux/bedrock-server-${BEDROCK_VERSION}.zip\"\nfi\n\necho \"Downloading $URL\"\ncurl -fsSL -H \"Accept-Language: en\" -H \"User-Agent: $UA\" -o bedrock-server.zip \"$URL\" || exit 1\n\n# Keep user data on reinstall.\nunzip -o bedrock-server.zip -x server.properties allowlist.json permissions.json\n[ -f server.properties ] || unzip -o bedrock-server.zip server.properties\nrm bedrock-server.zip\nchmod +x bedrock_server\nmkdir -p worlds\n\necho \"Install complete.\"\n",
+      "script": "#!/bin/bash\n# Pterodactyl install script: downloads Bedrock Dedicated Server.\napt-get update && apt-get install -y curl jq unzip ca-certificates\n\nmkdir -p /mnt/server && cd /mnt/server || exit 1\n\nUA=\"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36\"\nif [ \"${BEDROCK_VERSION}\" = \"latest\" ] || [ -z \"${BEDROCK_VERSION}\" ]; then\n  URL=$(curl -sSL -H \"Accept-Language: en\" -H \"User-Agent: $UA\" \\\n    https://net-secondary.web.minecraft-services.net/api/v1.0/download/links \\\n    | jq -r '.result.links[] | select(.downloadType == \"serverBedrockLinux\") | .downloadUrl')\nelse\n  URL=\"https://www.minecraft.net/bedrockdedicatedserver/bin-linux/bedrock-server-${BEDROCK_VERSION}.zip\"\nfi\n\necho \"Downloading $URL\"\ncurl -fsSL -H \"Accept-Language: en\" -H \"User-Agent: $UA\" -o bedrock-server.zip \"$URL\" || exit 1\n\n# Keep user data on reinstall.\nunzip -o bedrock-server.zip -x server.properties allowlist.json permissions.json\n[ -f server.properties ] || unzip -o bedrock-server.zip server.properties\nrm bedrock-server.zip\nchmod +x bedrock_server\nmkdir -p .versions\n[ -n \"$URL\" ] && echo \"$URL\" > .versions/bds\nmkdir -p worlds\n\necho \"Install complete.\"\n",
       "container": "debian:bookworm-slim",
       "entrypoint": "bash"
     }
@@ -166,6 +166,36 @@
       "user_viewable": true,
       "user_editable": true,
       "rules": "required|integer",
+      "field_type": "text"
+    },
+    {
+      "name": "Auto update",
+      "description": "1 = periodically check for new BDS / playit / MCXboxBroadcast versions, announce in-game and restart to apply them.",
+      "env_variable": "AUTO_UPDATE",
+      "default_value": "1",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|in:0,1",
+      "field_type": "text"
+    },
+    {
+      "name": "Update check interval",
+      "description": "Minutes between update checks.",
+      "env_variable": "UPDATE_INTERVAL",
+      "default_value": "60",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|integer|min:1|max:1440",
+      "field_type": "text"
+    },
+    {
+      "name": "Update notice",
+      "description": "Minutes of in-game notice before the restart (0 = restart immediately).",
+      "env_variable": "UPDATE_WARNING",
+      "default_value": "5",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|integer|min:0|max:60",
       "field_type": "text"
     }
   ]
