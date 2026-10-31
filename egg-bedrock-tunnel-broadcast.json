@@ -1,0 +1,172 @@
+{
+  "_comment": "Bedrock Dedicated Server with playit.gg tunnel (no port forwarding) and MCXboxBroadcast (join from Xbox friends list).",
+  "meta": {
+    "version": "PTDL_v2",
+    "update_url": null
+  },
+  "exported_at": "2026-10-31T00:00:00+00:00",
+  "name": "Bedrock + Tunnel + Broadcast",
+  "author": "keinosuke575@gmail.com",
+  "description": "Minecraft Bedrock Edition server that works without port forwarding (playit.gg UDP tunnel) and shows up in the Xbox friends list (MCXboxBroadcast).",
+  "features": null,
+  "docker_images": {
+    "Bedrock + Tunnel + Broadcast": "ghcr.io/shishen575/broadcast-be-egg:latest"
+  },
+  "file_denylist": [],
+  "startup": "bash /opt/start.sh",
+  "config": {
+    "files": "{\n    \"server.properties\": {\n        \"parser\": \"properties\",\n        \"find\": {\n            \"server-port\": \"{{server.build.default.port}}\",\n            \"server-name\": \"{{server.build.env.SERVER_NAME}}\",\n            \"level-name\": \"{{server.build.env.LEVEL_NAME}}\",\n            \"gamemode\": \"{{server.build.env.GAMEMODE}}\",\n            \"difficulty\": \"{{server.build.env.DIFFICULTY}}\",\n            \"max-players\": \"{{server.build.env.MAX_PLAYERS}}\",\n            \"online-mode\": \"{{server.build.env.ONLINE_MODE}}\"\n        }\n    }\n}",
+    "startup": "{\n    \"done\": \"Server started.\"\n}",
+    "logs": "{}",
+    "stop": "stop"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n# Pterodactyl install script: downloads Bedrock Dedicated Server.\napt-get update && apt-get install -y curl jq unzip ca-certificates\n\nmkdir -p /mnt/server && cd /mnt/server || exit 1\n\nUA=\"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36\"\nif [ \"${BEDROCK_VERSION}\" = \"latest\" ] || [ -z \"${BEDROCK_VERSION}\" ]; then\n  URL=$(curl -sSL -H \"Accept-Language: en\" -H \"User-Agent: $UA\" \\\n    https://net-secondary.web.minecraft-services.net/api/v1.0/download/links \\\n    | jq -r '.result.links[] | select(.downloadType == \"serverBedrockLinux\") | .downloadUrl')\nelse\n  URL=\"https://www.minecraft.net/bedrockdedicatedserver/bin-linux/bedrock-server-${BEDROCK_VERSION}.zip\"\nfi\n\necho \"Downloading $URL\"\ncurl -fsSL -H \"Accept-Language: en\" -H \"User-Agent: $UA\" -o bedrock-server.zip \"$URL\" || exit 1\n\n# Keep user data on reinstall.\nunzip -o bedrock-server.zip -x server.properties allowlist.json permissions.json\n[ -f server.properties ] || unzip -o bedrock-server.zip server.properties\nrm bedrock-server.zip\nchmod +x bedrock_server\nmkdir -p worlds\n\necho \"Install complete.\"\n",
+      "container": "debian:bookworm-slim",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "name": "Bedrock version",
+      "description": "BDS version, or 'latest'.",
+      "env_variable": "BEDROCK_VERSION",
+      "default_value": "latest",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|max:20",
+      "field_type": "text"
+    },
+    {
+      "name": "Server name",
+      "description": "Name shown in the server list and friends list.",
+      "env_variable": "SERVER_NAME",
+      "default_value": "Bedrock Server",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|max:60",
+      "field_type": "text"
+    },
+    {
+      "name": "World name",
+      "description": "World folder name.",
+      "env_variable": "LEVEL_NAME",
+      "default_value": "Bedrock level",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|max:60",
+      "field_type": "text"
+    },
+    {
+      "name": "Gamemode",
+      "description": "survival, creative or adventure.",
+      "env_variable": "GAMEMODE",
+      "default_value": "survival",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|in:survival,creative,adventure",
+      "field_type": "text"
+    },
+    {
+      "name": "Difficulty",
+      "description": "peaceful, easy, normal or hard.",
+      "env_variable": "DIFFICULTY",
+      "default_value": "easy",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|in:peaceful,easy,normal,hard",
+      "field_type": "text"
+    },
+    {
+      "name": "Max players",
+      "description": "Maximum players.",
+      "env_variable": "MAX_PLAYERS",
+      "default_value": "10",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|integer|min:1|max:200",
+      "field_type": "text"
+    },
+    {
+      "name": "Online mode",
+      "description": "Require Xbox authentication.",
+      "env_variable": "ONLINE_MODE",
+      "default_value": "true",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|in:true,false",
+      "field_type": "text"
+    },
+    {
+      "name": "Use playit tunnel",
+      "description": "1 = start the playit.gg agent so no port forwarding is needed.",
+      "env_variable": "USE_PLAYIT",
+      "default_value": "1",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|in:0,1",
+      "field_type": "text"
+    },
+    {
+      "name": "playit secret",
+      "description": "Optional agent secret. Leave empty to claim via the URL printed in the console.",
+      "env_variable": "PLAYIT_SECRET",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string|max:200",
+      "field_type": "text"
+    },
+    {
+      "name": "Public address",
+      "description": "Tunnel host from the playit dashboard (e.g. xxx.gl.joinmc.link). Advertised to friends.",
+      "env_variable": "PUBLIC_ADDRESS",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string|max:200",
+      "field_type": "text"
+    },
+    {
+      "name": "Public port",
+      "description": "Tunnel public UDP port from the playit dashboard.",
+      "env_variable": "PUBLIC_PORT",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|integer|min:1|max:65535",
+      "field_type": "text"
+    },
+    {
+      "name": "Use friends-list broadcast",
+      "description": "1 = run MCXboxBroadcast so friends can join from the friends list.",
+      "env_variable": "USE_BROADCAST",
+      "default_value": "1",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|in:0,1",
+      "field_type": "text"
+    },
+    {
+      "name": "Broadcast game version",
+      "description": "Version string shown in the session. Update when BDS updates.",
+      "env_variable": "BROADCAST_VERSION",
+      "default_value": "1.21.0",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|max:20",
+      "field_type": "text"
+    },
+    {
+      "name": "Broadcast protocol",
+      "description": "Protocol number matching the BDS version.",
+      "env_variable": "BROADCAST_PROTOCOL",
+      "default_value": "685",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|integer",
+      "field_type": "text"
+    }
+  ]
+}
