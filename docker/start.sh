@@ -1,9 +1,10 @@
 #!/bin/bash
-# Runs inside the Pterodactyl container: playit tunnel + MCXboxBroadcast + BDS,
+# Runs inside the Pterodactyl container: playit tunnel / frp client + MCXboxBroadcast + BDS,
 # with periodic update checks that announce in-game and restart.
 cd /home/container || exit 1
 
 PLAYIT_BIN=./playit
+FRPC_BIN=./frpc
 BROADCAST_JAR=./MCXboxBroadcastStandalone.jar
 BDS_BIN=./bedrock_server
 PLAYIT_SOCK=/home/container/.playit.sock
@@ -42,6 +43,7 @@ remote_version() {
     bds) [ "${BEDROCK_VERSION:-latest}" = latest ] && latest_bds_url ;;
     playit) latest_gh_tag playit-cloud/playit-agent ;;
     broadcast) latest_gh_tag rtm516/MCXboxBroadcast ;;
+    frp) if [ -n "${FRP_VERSION}" ]; then echo "v${FRP_VERSION#v}"; else latest_gh_tag fatedier/frp; fi ;;
   esac 2>/dev/null
 }
 
@@ -49,10 +51,11 @@ enabled_components() {
   echo bds
   is_on "$USE_PLAYIT" && echo playit
   is_on "$USE_BROADCAST" && echo broadcast
+  is_on "$USE_FRP" && echo frp
 }
 
 component_path() {
-  case $1 in bds) echo "$BDS_BIN" ;; playit) echo "$PLAYIT_BIN" ;; broadcast) echo "$BROADCAST_JAR" ;; esac
+  case $1 in bds) echo "$BDS_BIN" ;; playit) echo "$PLAYIT_BIN" ;; broadcast) echo "$BROADCAST_JAR" ;; frp) echo "$FRPC_BIN" ;; esac
 }
 
 # Components whose latest version differs from the installed one.
@@ -91,6 +94,16 @@ install_broadcast() {
     && mv "$BROADCAST_JAR.new" "$BROADCAST_JAR"
 }
 
+install_frp() { # $1 = tag such as v0.61.0
+  local ver=${1#v} arch=amd64 tgz=frp.tar.gz
+  [ "$ARCH" = aarch64 ] && arch=arm64
+  curl -fsSL -o "$tgz" "https://github.com/fatedier/frp/releases/download/v${ver}/frp_${ver}_linux_${arch}.tar.gz" \
+    || { rm -f "$tgz"; return 1; }
+  tar -xzf "$tgz" --strip-components=1 --wildcards '*/frpc' || { rm -f "$tgz"; return 1; }
+  rm -f "$tgz"
+  chmod +x "$FRPC_BIN"
+}
+
 # Install missing components; with AUTO_UPDATE also bring outdated ones up to date.
 sync_components() {
   local c r need
@@ -101,7 +114,7 @@ sync_components() {
     is_on "$AUTO_UPDATE" && [ -n "$r" ] && [ "$r" != "$(ver_get "$c")" ] && need=1
     [ "$need" = 1 ] && [ -n "$r" ] || continue
     log "$c をインストール中 ($r)"
-    if [ "$c" = bds ]; then install_bds "$r"; else "install_$c"; fi \
+    "install_$c" "$r" \
       && ver_set "$c" "$r" || log "$c のインストールに失敗しました。現在のバージョンを使い続けます"
   done
 }
@@ -153,6 +166,34 @@ YML
   cd ..
 }
 
+# ---- frp client ------------------------------------------------------------
+# FRP_FORWARDS = "proto:localPort:remotePort,..." ; default forwards the server port (TCP+UDP) to PUBLIC_PORT.
+frp_forwards() {
+  if [ -n "${FRP_FORWARDS}" ]; then printf '%s' "${FRP_FORWARDS}"
+  elif [ -n "${PUBLIC_PORT}" ]; then printf 'udp:%s:%s,tcp:%s:%s' "${SERVER_PORT}" "${PUBLIC_PORT}" "${SERVER_PORT}" "${PUBLIC_PORT}"
+  fi
+}
+
+write_frp_config() {
+  local fw item proto lport rport
+  fw=$(frp_forwards)
+  umask 077
+  {
+    echo "serverAddr = \"${FRP_SERVER}\""
+    echo "serverPort = ${FRP_SERVER_PORT:-7000}"
+    echo 'auth.method = "token"'
+    echo "auth.token = \"${FRP_TOKEN}\""
+    IFS=',' read -ra items <<< "$fw"
+    for item in "${items[@]}"; do
+      IFS=: read -r proto lport rport <<< "$item"
+      [ -n "$proto" ] && [ -n "$lport" ] && [ -n "$rport" ] || continue
+      printf '\n[[proxies]]\nname = "bedrock-%s-%s"\ntype = "%s"\nlocalIP = "127.0.0.1"\nlocalPort = %s\nremotePort = %s\n' \
+        "$proto" "$rport" "$proto" "$lport" "$rport"
+    done
+  } > frpc.toml
+  umask 022
+}
+
 # ---- helpers: tunnel, broadcaster ------------------------------------------
 HELPER_PIDS=()
 stop_helpers() {
@@ -171,10 +212,17 @@ print_setup_status() {
       log "[未完了] playit シークレットが未設定です。playit.gg でエージェントのシークレットキーを発行し、パネルの「playit シークレットキー」に入力して再起動してください"
     fi
   fi
+  if is_on "$USE_FRP"; then
+    if [ -n "${FRP_SERVER}" ] && [ -n "${FRP_TOKEN}" ] && [ -n "$(frp_forwards)" ]; then
+      log "[OK] frp: ${FRP_SERVER}:${FRP_SERVER_PORT:-7000} へ転送します ($(frp_forwards))"
+    else
+      log "[未完了] frp: 「frp サーバー」「frp トークン」と、公開ポート(または転送の指定)を設定してください"
+    fi
+  fi
   if [ -n "${PUBLIC_ADDRESS}" ] && [ -n "${PUBLIC_PORT}" ]; then
     log "[OK] 公開アドレス: ${PUBLIC_ADDRESS}:${PUBLIC_PORT}"
   else
-    log "[未完了] 公開アドレス/公開ポートが未設定です。playit ダッシュボードで Minecraft Bedrock (RakNet) のトンネルを作り、パネルの「公開アドレス」「公開ポート」に入力して再起動してください(それまでサーバー自体は通常どおり起動します)"
+    log "[未完了] 公開アドレス/公開ポートが未設定です。トンネル(playit や frp)で外に公開したアドレスとポートを、パネルの「公開アドレス」「公開ポート」に入力して再起動してください(それまでサーバー自体は通常どおり起動します)"
   fi
   if is_on "$USE_BROADCAST"; then
     if [ -d broadcast/cache ] || [ -d broadcast/auth ]; then
@@ -199,6 +247,18 @@ start_helpers() {
       HELPER_PIDS+=($!)
     else
       log "playit が見つかりません(ダウンロードに失敗した可能性があります)。ネットワークの設定を確認してください"
+    fi
+  fi
+  if is_on "$USE_FRP"; then
+    if [ ! -x "$FRPC_BIN" ]; then
+      log "frpc が見つかりません(ダウンロードに失敗した可能性があります)。ネットワークの設定を確認してください"
+    elif [ -z "${FRP_SERVER}" ] || [ -z "${FRP_TOKEN}" ] || [ -z "$(frp_forwards)" ]; then
+      log "frp をスキップしました: frp サーバー・トークン・公開ポートを設定してください"
+    else
+      write_frp_config
+      log "frp クライアントを起動します"
+      "$FRPC_BIN" -c frpc.toml </dev/null &
+      HELPER_PIDS+=($!)
     fi
   fi
   if is_on "$USE_BROADCAST"; then
