@@ -162,7 +162,7 @@ print_setup_status() {
   if [ -n "${PUBLIC_ADDRESS}" ] && [ -n "${PUBLIC_PORT}" ]; then
     log "[OK] 公開アドレス: ${PUBLIC_ADDRESS}:${PUBLIC_PORT}"
   else
-    log "[未完了] 公開アドレス/公開ポートが未設定です。playit ダッシュボードで Minecraft Bedrock (UDP) のトンネルを作り、パネルの「公開アドレス」「公開ポート」に入力して再起動してください(それまでサーバー自体は通常どおり起動します)"
+    log "[未完了] 公開アドレス/公開ポートが未設定です。playit ダッシュボードで Minecraft Bedrock (RakNet) のトンネルを作り、パネルの「公開アドレス」「公開ポート」に入力して再起動してください(それまでサーバー自体は通常どおり起動します)"
   fi
   if is_on "$USE_BROADCAST"; then
     if [ -d broadcast/cache ] || [ -d broadcast/auth ]; then
